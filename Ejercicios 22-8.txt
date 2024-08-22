@@ -1,3 +1,4 @@
+
 --CONSULTAS SUMARIAS--
 
 --SUM(col)
@@ -23,7 +24,69 @@ WHERE YEAR(f.fecha) = YEAR(GETDATE()) - 1
 --CONSULTAS AGRUPADAS
 
 --cuanto se facturó por año en total
-SELECT sum(df.cantidad*df.pre_unitario) as 'Total', f.fecha as 'Año'
-FROM detalle_facturas df
-join facturas f on f.nro_factura = df.nro_factura
-GROUP BY 'Total'
+SELECT YEAR(f.fecha) as 'Año', sum(df.cantidad*df.pre_unitario) as 'Total'
+FROM detalle_facturas as df
+join facturas as f on f.nro_factura = df.nro_factura
+GROUP BY YEAR(fecha)
+order by 1 desc
+
+--Por AÑO Y MES
+SELECT YEAR(f.fecha) as 'Año', MONTH(f.fecha) as 'MES',sum(df.cantidad*df.pre_unitario) as 'Total'
+FROM detalle_facturas as df
+join facturas as f on f.nro_factura = df.nro_factura
+WHERE YEAR(f.fecha) between YEAR(GETDATE())-3 and YEAR(GETDATE())
+GROUP BY YEAR(f.fecha), MONTH(f.fecha)
+order by 1 desc,2 desc
+
+
+--Facturacion por mes y año con el total, siempre que el total facturado (por mes y año) sea menor a 50 mil
+
+SELECT YEAR(f.fecha) as 'Año', MONTH(f.fecha) as 'MES',sum(df.cantidad*df.pre_unitario) as 'Total' 
+FROM detalle_facturas as df
+join facturas as f on f.nro_factura = df.nro_factura
+GROUP BY YEAR(f.fecha), MONTH(f.fecha)
+HAVING SUM(df.cantidad*df.pre_unitario) < 50000
+order by 1 desc,2 desc
+
+
+
+----Facturacion por mes y año con el total, siempre que la cantidad de facturas realizadas (x mes x año)
+--sea inferior a 10 
+-- clientes con apellido que comienza de A a la M
+
+SELECT YEAR(f.fecha) as 'Año', MONTH(f.fecha) as 'MES',sum(df.cantidad*df.pre_unitario) as 'Total', c.ape_cliente 'APELLIDO' 
+FROM detalle_facturas as df
+join facturas as f on f.nro_factura = df.nro_factura
+join clientes as c on c.cod_cliente = f.cod_cliente
+WHERE c.ape_cliente like '[a-m]%'
+GROUP BY YEAR(f.fecha), MONTH(f.fecha), c.ape_cliente
+HAVING COUNT(distinct f.nro_factura) < 10
+order by 1 desc,2 desc
+
+
+-------------------------------------------
+--EJERCICIOS
+
+--7)Se quiere saber la cantidad de ventas que hizo el vendedor de código 3
+
+--TANTO CODIGO AL PEDO
+
+/*
+SELECT f.nro_factura as 'Ventas', v.nom_vendedor +' '+ v.ape_vendedor as 'Vendedor', c.cod_cliente 'cliente'	
+FROM facturas f
+join vendedores v on v.cod_vendedor = f.cod_vendedor
+join detalle_facturas df on df.nro_factura = f.nro_factura
+join clientes c on c.cod_cliente = f.cod_cliente
+WHERE v.cod_vendedor = 3
+GROUP BY f.nro_factura, v.nom_vendedor, v.ape_vendedor, c.cod_cliente 
+*/
+
+
+SELECT count(*) 'Cant. de Ventas'
+FROM facturas
+WHERE cod_vendedor = 3
+
+--8) ¿Cuál fue la fecha de la primera y última venta que se realizó en este
+--negocio?
+
+
