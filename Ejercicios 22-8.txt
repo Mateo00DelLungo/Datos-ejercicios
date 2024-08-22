@@ -1,0 +1,29 @@
+--CONSULTAS SUMARIAS--
+
+--SUM(col)
+--AVG(col)
+--MAX(col)
+--MIN(col)
+--COUNT(*)
+
+--Cuanto facturó en total el negocio
+ SELECT sum(df.cantidad*df.pre_unitario)
+		FROM detalle_facturas df
+
+--Cuanto facturó el año pasado, cual fue el precio mas alto 
+-- y el mas  bajo y cuantos registgros se emitieron 
+
+SELECT SUM(df.cantidad*df.pre_unitario) as 'Total', MIN(df.pre_unitario)as 'Más bajo', MAX(df.pre_unitario)as 'Más alto', 
+	COUNT(f.nro_factura) as 'Cantidad Facturas'
+FROM detalle_facturas df
+join facturas f on f.nro_factura = df.nro_factura
+WHERE YEAR(f.fecha) = YEAR(GETDATE()) - 1
+
+
+--CONSULTAS AGRUPADAS
+
+--cuanto se facturó por año en total
+SELECT sum(df.cantidad*df.pre_unitario) as 'Total', f.fecha as 'Año'
+FROM detalle_facturas df
+join facturas f on f.nro_factura = df.nro_factura
+GROUP BY 'Total'
