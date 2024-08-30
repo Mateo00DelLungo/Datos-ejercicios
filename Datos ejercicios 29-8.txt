@@ -1,0 +1,93 @@
+
+--Ejercicios 29/8
+--Cuanto facturo cada vendedor por dia el mes pasado?
+--Listar solo los que hayan hecho 2 o mas ventas por dia el mes pasado
+
+
+SELECT v.cod_vendedor, v.ape_vendedor 'Vendedor', DAY(fecha) 'Dia', SUM(cantidad*pre_unitario)'TOTAL'
+FROM facturas as f
+join detalle_facturas as df on df.nro_factura = f.nro_factura
+join vendedores as v on v.cod_vendedor = f.cod_vendedor
+WHERE datediff(MONTH,f.fecha,GETDATE())= 1
+--MONTH(f.fecha) = MONTH(GETDATE())-1
+GROUP BY v.cod_vendedor, v.ape_vendedor, DAY(f.fecha)
+HAVING COUNT(DISTINCT f.nro_factura) >= 2
+ORDER BY v.cod_vendedor, 'dia'
+
+--Listar los clientes y los vendedores 
+--en una misma tabla de resultados
+
+
+SELECT c.cod_cliente as'Codigo', 
+		c.ape_cliente as'Apellido', 
+		c.nom_cliente as'Nombre',
+		'Cliente'as Tipo
+FROM clientes c 
+UNION
+SELECT v.cod_vendedor 'Codigo', 
+		v.ape_vendedor 'Apellido', 
+		v.nom_vendedor 'Nombre',
+		'Vendedor' as Tipo
+FROM vendedores v 
+ORDER BY 4,2,3
+
+--Listar los montos totales mensuales facturados este año
+--y al final del listado se quiere ver el monto total
+--facturado este año.
+
+
+SELECT 'Mes' as ' ',MONTH(fecha)as' ', SUM(cantidad*pre_unitario) 'Total'
+FROM facturas f
+join detalle_facturas d on d.nro_factura = f.nro_factura
+WHERE YEAR(fecha) = YEAR(GETDATE())
+GROUP BY MONTH(fecha)
+
+UNION
+
+SELECT 'Año'as' ' , YEAR(GETDATE())as' ',  SUM(cantidad*pre_unitario) 'Total'
+FROM facturas f
+join detalle_facturas d on d.nro_factura = f.nro_factura
+WHERE YEAR(fecha) = YEAR(GETDATE())
+ORDER BY 1 desc,2
+
+
+-----------------------
+/*
+-----VISTAS
+guardan una consula select
+
+Se guarda como un objeto
+Necesita un nombre si o si 
+
+CREATE view 'nombre_vista'
+
+-------------------------------
+RESTRICCIONES
+
+~ no se pueden crear vistas temporales
+~ no se pueden combinar instrucciones
+~ maximo 1024 columnas
+~ no se pueden asociar reglas 
+
+-------------
+SP_HELPTEXT nombrevista
+nos devuelve la consulta con la que se creó la vista
+
+*/
+use LIBRERIA
+
+
+CREATE view vis_clientes
+as
+SELECT c.cod_cliente, ape_cliente +','+ nom_cliente as 'Nombre Completo', 
+		calle+' '+trim(str(altura))+' B° '+barrio Direccion
+FROM clientes c 
+join barrios b on b.cod_barrio = c.cod_barrio
+
+
+--CONSULTAR la vista anterior para clientes cuyo apellido
+--comience con las letras de la A a la M
+
+SELECT *
+FROM vis_clientes
+WHERE [Nombre Completo] like '[a-m]%'
