@@ -1,0 +1,125 @@
+use Libreria
+GO
+
+--Ej 6 pag 12
+select a.cod_articulo, descripcion, AVG(d.pre_unitario) precio_promedio, SUM(cantidad*d.pre_unitario) Imp_Tot,
+AVG(d.pre_unitario*cantidad) importe_promedio,COUNT(*) 'cant reg', COUNT(distinct nro_factura) 'cant cod.facturas',
+count(distinct a.cod_articulo) 'cantidad cod.articulos'
+from detalle_facturas d
+join articulos a on d.cod_articulo=a.cod_articulo
+where descripcion not like 'C%'
+group by a.cod_articulo, descripcion
+having SUM(cantidad)>=100 or SUM(cantidad*d.pre_unitario)>700
+
+/*
+--ej 7)
+--El encargado del negocio quiere saber cuánto fue la facturación del año pasado.
+Por otro lado, cuánto es la facturación del mes pasado, la de este mes y la de hoy
+(Cada pedido en una consulta distinta, y puede unirla en una sola tabla de
+resultado)
+
+--Hay que hacer UNION si necesitamos traer varias consultas
+--las consultas deben tener la misma cantidad de consultas
+*/
+
+SELECT '4' orden,'Año Pasado' periodo,SUM(cantidad*pre_unitario) as 'Total'
+FROM facturas f join detalle_facturas d on d.nro_factura = f.nro_factura
+WHERE YEAR(fecha) = YEAR(GETDATE())-1
+
+UNION
+
+SELECT '3','Mes pasado', SUM(cantidad*pre_unitario) as 'Total'
+FROM facturas f join detalle_facturas d on d.nro_factura = f.nro_factura
+WHERE DATEDIFF(MONTH,fecha,getdate()) = 1
+
+UNION
+
+SELECT '2','Éste mes' , SUM(cantidad*pre_unitario) as 'Total'
+FROM facturas f join detalle_facturas d on d.nro_factura = f.nro_factura
+WHERE DATEDIFF(MONTH,fecha,getdate()) = 0
+
+UNION
+
+SELECT '1','Dia' , SUM(cantidad*pre_unitario) as 'Total'
+FROM facturas f join detalle_facturas d on d.nro_factura = f.nro_factura
+WHERE DATEDIFF(DAY,fecha,getdate()) = 0
+order by orden
+
+
+---------------------------
+-- VISTAS --
+
+--Crear una vista que guarde una consulta que liste por cliente
+--la cantidad de facturas y montos totales anuales que compró
+
+drop view vis_compra_anual412337
+
+CREATE view vis_compra_anual412337
+as
+SELECT cod_cliente, YEAR(fecha)'Año',SUM(cantidad*pre_unitario) 'Total', 
+COUNT(distinct df.nro_factura) 'Cantidad de facturas'
+FROM facturas f join detalle_facturas df on df.nro_factura = f.nro_factura
+group by cod_cliente, YEAR(fecha)
+
+
+--mostrar utilizando la vista anterior los totales 
+--anuales comprados por cliente cuyo apellido no comience con A y que 
+--realizaron menos de 2 compras por año
+
+SELECT v.cod_cliente, total as 'Total anual' 
+FROM vis_compra_anual412337 as v join clientes c on c.cod_cliente = v.cod_cliente
+WHERE c.ape_cliente not like 'a%'
+and [Cantidad de facturas] > 2
+
+--Articulos con precios por debajo del promedio
+
+--Con subconsultas
+
+SELECT cod_articulo, descripcion, pre_unitario
+FROM articulos
+WHERE pre_unitario < (select avg(pre_unitario)
+						from articulos)
+
+--SUB CONSULTAS EN EL WHERE
+
+--no se puede comprarar Todos los campos con un solo campo
+-- no se usa el select *
+
+--TEST DE PERTINENCIA AL CONJUNTO
+-- Lista los articulos que se vendieron este año 
+SELECT a.cod_articulo, descripcion, a.pre_unitario, YEAR(fecha) 'Vendido en el año'
+from articulos a
+join detalle_facturas df on a.cod_articulo = df.cod_articulo
+join facturas f on df.nro_factura = f.nro_factura
+where a.cod_articulo in (select cod_articulo 
+						from detalle_facturas d
+						join facturas f on d.nro_factura = f.nro_factura
+						where YEAR(fecha) = YEAR(GETDATE())
+						)
+
+-- TEST DE EXISTENCIA
+-- listar los clientes que vinieron este año
+-- desde la subconsulta llamamos un campo de la consulta principal
+
+SELECT c.cod_cliente, ape_cliente, nom_cliente
+FROM clientes c 
+where EXISTS (SELECT cod_cliente --puede usarse select * porque no importa cuantos campos traiga 
+			 from facturas 
+			 WHERE YEAR(fecha) = YEAR(GETDATE())
+			 AND cod_cliente = c.cod_cliente --Referencia externa
+			 )								-- Hace referencia a un campo exterior
+
+			 -- chequeamos que el codigo de la subconsulta
+			 --sea el mismo que el de la consulta principal
+
+-- TEST CUANTIDICADOS: ANY Y ALL 			
+-- Listar los clientes que compraron algun articulo 
+--con precio mayor a 1000
+
+SELECT * 
+FROM clientes c 
+WHERE 1000 < any  (select pre_unitario --alguno de los registros puede ser mayor a 1000
+				from detalle_facturas d 
+				join facturas f on d.nro_factura = f.nro_factura
+				where c.cod_cliente = cod_cliente
+				)
